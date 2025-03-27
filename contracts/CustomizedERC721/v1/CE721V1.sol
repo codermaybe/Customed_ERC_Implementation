@@ -7,18 +7,21 @@
  * @dev 本合约仅用于学习和研究。所有复现均按照eip721标准。详见：https://github.com/ethereum/ERCs/blob/master/ERCS/erc-721.md
  * @dev 自行复现的erc721各项功能。interface文件夹中的所有文件为官方文档移植
  * @dev 逐行按照官方文档翻译方法的实现需求，请允许我偷点小懒用翻译 *。*
- * @dev V1版本特性：
+ * @dev V1版本特性：自定义_baseURI，_nextToken，以及mint、burn方法
  */
 import {ERC721} from "../interface/ERC721.sol";
 import {ERC721TokenReceiver} from "../interface/ERC721TokenReceiver.sol";
 
+
 pragma solidity ^0.8.28;
 
 contract CE721V1 is ERC721,ERC721TokenReceiver{
-    ///@dev 以下三个map为按照文档需求自行命名的，没有看见官方定义
+    ///@dev 以下截止到balanceOf函数的实现之前均为特性部分，官方文档无设定----------------------------
     ///@param _balanceOf 记录对应地址的余额
     ///@param _ownerOf 记录对应token的拥有者
     ///@param  _approved 记录代币单一授权列表
+    ///@param  _ApprovalForAll 记录某个地址授权的操作员列表
+    
     
     mapping (address => uint) _balanceOf;
     
@@ -27,6 +30,96 @@ contract CE721V1 is ERC721,ERC721TokenReceiver{
     mapping (uint256 => address)  _approved;
 
     mapping (address => mapping(address =>bool)) _ApprovalForAll;
+    
+    ///@param _contractOwner 记录此合约的拥有者
+    ///@param _projectName 记录此NFT项目的名称
+    ///@param _baseURI 记录NFT对应的链接地址
+    ///@param _nextToken 记录将派发的NFT编号
+    
+    address public _contractOwner;
+    event OwnerChanged(address indexed oldOwner,address indexed newOwner);
+
+    string public _projectName;
+    event ProjectNameChanged(string oldName,string newName);
+    
+    string public _baseURI;
+    event BaseUriChanged(string _oldURI,string _newURI);
+    
+    uint256 public _nextToken;
+
+   
+    //初始构造函数，不附带任何数据
+    constructor(string projectName,string baseURI){
+         _contractOwner = msg.sender;
+        _projectName = projectName;
+        _baseURI = baseURI;
+        _nextToken = 0;
+    }
+    
+    ///@notice 此处V1版本设定为有序token,注意initialOwners与initialTokenNumber的对应顺序。
+    ///@notice 被抛弃的版本 constructor(string projectName,string baseURI,uint256[] initialTokenNumber ,address[] initialOwners,uint256 maximumTokenId)
+    ///        此版本需对initialTokenNumber做重复鉴定，存在大量消耗gas费的问题
+    
+    constructor(string projectName,string baseURI,uint256 firstTokenNumber,uint256 lastTokenNumber ,address[] initialOwners){
+        require(firstTokenNumber <= lastTokenNumber, "初始化数据失败,检查TokenNumber范围");
+        require(initialOwners.length == (lastTokenNumber - firstTokenNumber + 1), "初始化数据参数数量不匹配");
+        _contractOwner = msg.sender;
+        _projectName = projectName;
+        _baseURI = baseURI;
+        //节省gas费所进行的操作，直接针对数据进行修改
+        for(uint256 i = 0; i < initialOwners.length; i++) {
+            require(initialOwners[i] != address(0), "不能铸造给零地址");
+            uint256 tokenId = firstTokenNumber + i;
+            _mint(initialOwners[i], tokenId);
+        }
+        _nextToken = lastTokenNumber + 1;
+    }
+    function mint(address _to, uint256 _tokenId) public {
+    require(msg.sender == _contractOwner, "非合约管理员无法派发NFT");
+    require(_ownerOf[_tokenId] == address(0), "该NFT已存在");
+    
+    _mint(_to, _tokenId);
+    
+    // 更新_nextToken
+    if (_tokenId >= _nextToken) {
+        _nextToken = _tokenId + 1;
+    }
+}
+
+    function _mint(address to, uint256 tokenId) internal {
+        require(to != address(0), "不能铸造给零地址");
+        require(_ownerOf[tokenId] == address(0), "代币已存在");
+    
+        _balanceOf[to] += 1;
+        _ownerOf[tokenId] = to;
+    
+        emit Transfer(address(0), to, tokenId);
+    }
+
+    function burn(uint256 _tokenId) public {
+    require(msg.sender == _ownerOf[_tokenId] || msg.sender == _contractOwner, "无权销毁");
+    _burn(_tokenId);
+}
+    function _burn(uint256 tokenId) internal {
+    address owner = _ownerOf[tokenId];
+    
+    // 清除授权
+    _approved[tokenId] = address(0);
+    
+    _balanceOf[owner] -= 1;
+    _ownerOf[tokenId] = address(0);
+    
+    emit Transfer(owner, address(0), tokenId);
+}
+    function transferOwnership(address newOwner) public {
+    require(msg.sender == _contractOwner, "只有所有者可以转移");
+    require(newOwner!=address(0),"不可转给零地址");
+    emit OwnerChanged(_contractOwner, newOwner);
+    _contractOwner = newOwner;
+}
+
+    ///个人设计部分结束
+
 
     /// @notice 计算分配给所有者的所有 NFT 数量。
     /// @dev 分配给零地址的 NFT 被视为无效，并且查询零地址会抛出异常。
@@ -154,6 +247,4 @@ contract CE721V1 is ERC721,ERC721TokenReceiver{
        return _ApprovalForAll[_owner][_operator];
     };
     
-
-
 }
