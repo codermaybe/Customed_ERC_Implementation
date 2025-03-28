@@ -1,7 +1,7 @@
 //SPDX-License-Identifier:MIT
 
 /**
- * @title CustomizedERC20
+ * @title CustomizedERC721
  * @author github.com/codermaybe
  * @dev CustomizedERC20 is a customized ERC20 token with a few additional features.
  * @dev 本合约仅用于学习和研究。所有复现均按照eip721标准。详见：https://github.com/ethereum/ERCs/blob/master/ERCS/erc-721.md
