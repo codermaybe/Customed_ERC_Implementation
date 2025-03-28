@@ -13,3 +13,5 @@
 - 指定文件测试 `npx hardhat test ./test/Your_script_path/your_script_name.js`          ||  `--network Your_NetWork`可选
 - 名称匹配测试 `npx hardhat test --grep "Your_test_name" `   ||  `--network Your_NetWork`可选
 - 给指定脚本添加`.only` 标记
+
+### 制作不易，觉得代码还入得了眼的给个小星星可否

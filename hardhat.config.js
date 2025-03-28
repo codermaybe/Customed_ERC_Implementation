@@ -15,19 +15,9 @@ module.exports = {
           },
         },
       },
-      {
-        version: "0.4.20",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
     ],
   },
-
-  Networks: {
+  networks: {
     localhost: {
       chainId: 1337,
       accounts: [
